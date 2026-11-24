@@ -84,11 +84,14 @@ function runExample(name, extra) {
 function explain(out, k) {
   const read = f => { try { return JSON.parse(fs.readFileSync(path.join(out, f), 'utf8')); } catch { return null; } };
   const lines = [`  why: ${k}`];
+  // Report keys are 'file › title'; plan and run keys are 'project › file › describe… › title'.
+  const sep = k.indexOf(' › '), file = k.slice(0, sep), title = k.slice(sep + 3);
+  const same = x => typeof x === 'string' && x.includes(' › ' + file + ' › ') && x.endsWith(' › ' + title);
   const plan = read('plan.json'), baseline = read('baseline.json'), faults = read('faults.json');
-  const pk = plan && Object.keys(plan.tests || {}).find(x => x.endsWith(k));
+  const pk = plan && Object.keys(plan.tests || {}).find(same);
   if (pk) for (const f of plan.tests[pk].faults) lines.push(`    planned: ${f.op}${f.endpoint ? ' ' + f.endpoint.replace(/https?:\/\/[^/]+/, '') : ''}${f.path ? ' ' + f.path.join('.') : ''}`);
-  else lines.push(`    planned: (not in plan${plan && plan.excluded ? '; excluded: ' + Object.entries(plan.excluded).filter(([x]) => x.endsWith(k)).map(([, v]) => v).join(' ') : ''})`);
-  for (const b of (baseline && baseline.rows || []).filter(x => x.key && x.key.endsWith(k))) {
+  else lines.push(`    planned: (not in plan${plan && plan.excluded ? '; excluded: ' + Object.entries(plan.excluded).filter(([x]) => same(x)).map(([, v]) => v).join(' ') : ''})`);
+  for (const b of (baseline && baseline.rows || []).filter(x => same(x.key))) {
     const t = b.traffic || {};
     lines.push(`    baseline ${b.repeat}: ${b.status} ${b.ms}ms${b.error ? ' error: ' + String(b.error).split('\n')[0].slice(0, 160) : ''}`);
     lines.push(`      asserted: ${JSON.stringify(t.asserted || []).slice(0, 300)}`);
@@ -97,7 +100,7 @@ function explain(out, k) {
       lines.push(`      ${e.key.replace(/https?:\/\/[^/]+/, '')} n=${e.count}${e.auth ? ' auth' : ''} lists: ${lists || '-'}`);
     }
   }
-  for (const f of (faults && faults.rows || []).filter(x => x.key && x.key.endsWith(k) && x.fault)) {
+  for (const f of (faults && faults.rows || []).filter(x => same(x.key) && x.fault)) {
     lines.push(`    fault ${f.fault && f.fault.op} ${f.fault && f.fault.path ? f.fault.path.join('.') : ''}: ${f.status} applied=${f.fault && f.fault.applied} bodyStarted=${f.fault && f.fault.bodyStarted}${f.error ? ' error: ' + String(f.error).split('\n')[0].slice(0, 160) : ''}`);
   }
   return lines.join('\n');

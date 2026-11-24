@@ -17,6 +17,9 @@ test.describe('task list', () => {
     await expect.poll(() => tasksPage.rows.count()).toBeGreaterThan(0);
   });
   test('no error banner', async ({ tasksPage }) => {
+    // not.toBeVisible() passes the moment it runs: wait for the page's requests first, or it
+    // passes before a failed request has had time to show the banner.
+    await tasksPage.page.waitForLoadState('networkidle');
     await expect(tasksPage.error).not.toBeVisible();
   });
   test('row contains a word', async ({ tasksPage }) => {
