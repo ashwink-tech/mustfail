@@ -114,7 +114,7 @@ With no terminal there is no prompt; `--yes` makes that explicit. Run it on a sc
 - **Only the deciding run is repeated.** A test with a race in it can stop at a different step from one run to the next (a wait one time, an assertion the next). The run a strong or write-gated grade rests on is run twice and the weaker result counts; two runs catch such a race often, not always, and runs that decide other grades are run once.
 - **Two baseline runs** catch flaky tests only some of the time.
 - **Runtime:** about 3 to 4 times your normal suite runtime for a full run. Scope with extra Playwright args.
-- **Tested on Playwright 1.50 to 1.65** (1.50, 1.53, 1.56, 1.59, 1.62, 1.65: every example grade identical) and Node 20 and 22, on Linux and macOS, with Chrome/Chromium, against two real suites (a large private suite and Strapi's admin, settings and content-manager e2e tests, 200+ tests). The CI workflow also covers Windows, Firefox and WebKit; until it has run, treat those as untested.
+- **Tested on Playwright 1.50 to 1.65** (1.50, 1.53, 1.56, 1.59, 1.62, 1.65: every example grade identical) and Node 20, 22 and 24, on Linux, macOS and Windows, with Chrome, Firefox and WebKit (every example grade identical in CI), and against two real suites with Chrome/Chromium (a large private suite and Strapi's admin, settings and content-manager e2e tests, 200+ tests).
 
 ## How this differs from similar tools
 
