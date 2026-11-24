@@ -92,6 +92,8 @@ test('every row is Open or Done (passes on an empty list)', async ({ tasksPage }
 });
 
 test('priorities checked through a boolean (allInnerTexts + every)', async ({ tasksPage }) => {
+  // allInnerTexts() does not wait: without this it can read the table before the rows arrive.
+  await tasksPage.rows.first().waitFor();
   const texts = await tasksPage.rows.allInnerTexts();
   expect(texts.length).toBeGreaterThan(0);
   expect(texts.every(t => /high|medium|low/.test(t))).toBe(true);
