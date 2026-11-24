@@ -30,6 +30,8 @@ STRONG — An assertion failed when the data was wrong
 
 mustfail also writes an HTML report to `.mustfail/report.html`. Click a grade to see its tests, or type to filter by test name or file.
 
+![The HTML report for examples/cart: grade tiles, then each test with its grade and the reason](https://raw.githubusercontent.com/ashwink-tech/mustfail/main/docs/report.png)
+
 **Requirements:** Node 20 or newer (20.6+ for ES-module projects) and `@playwright/test` 1.50 or newer. mustfail has no dependencies.
 
 **Network:** mustfail makes no calls of its own. It changes responses on their way from your app to the browser, through Playwright, and writes its report to a local folder.
