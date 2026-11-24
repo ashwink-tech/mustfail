@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-alpha.42
+
+- README rewritten in plainer language. Same content; no code change.
+
 ## 0.1.0-alpha.41
 
 - Verified in CI on Windows, macOS and Linux with Chrome, Firefox and WebKit, Node 20 to 24: every example grade identical.

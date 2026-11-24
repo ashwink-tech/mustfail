@@ -1,6 +1,6 @@
 {
   "name": "mustfail",
-  "version": "0.1.0-alpha.41",
+  "version": "0.1.0-alpha.42",
   "description": "Finds Playwright tests that stay green when the app is broken. No changes to your tests.",
   "license": "MIT",
   "author": "Ashwin (https://github.com/ashwink-tech)",
