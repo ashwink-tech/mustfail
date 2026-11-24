@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.41
+
+- Verified in CI on Windows, macOS and Linux with Chrome, Firefox and WebKit, Node 20 to 24: every example grade identical.
+- `package.json` names the author, repository and issue tracker. The README lists requirements, says mustfail makes no network calls of its own, and says what feedback helps most.
+- Example fix: one example test read the table before its rows arrived and flaked on slower runners. No change to mustfail itself.
+
 ## 0.1.0-alpha.40
 
 - Code comments and unit-test fixtures no longer name the private suite mustfail was validated on, its test ids or its API operation names. No behaviour change.

@@ -32,6 +32,10 @@ STRONG — An assertion failed when the data was wrong
 
 An HTML version is written to `.mustfail/report.html`: click a grade to show only its tests, or type to filter by test name or file.
 
+**Requirements:** Node 20 or newer (20.6+ for ES-module projects) and `@playwright/test` 1.50 or newer. No dependencies of its own.
+
+**Nothing leaves your machine.** mustfail makes no network calls of its own: it changes responses on their way from your app to the browser, through Playwright, and writes its report to a local folder.
+
 > **Alpha.** Expect rough edges. Run it against a local or disposable environment: fault runs repeat your tests' requests, including writes that the fault does not target.
 
 ## What the grades mean
@@ -136,6 +140,10 @@ node test/matrix.js 1.50.1 1.65.1  # the tasks example against other @playwright
 
 The examples need Google Chrome installed (they use `channel: 'chrome'`). `examples/tasks-esm` is generated from `examples/tasks` by the e2e script: edit the tasks app, not the copy. `examples/cart odd` is generated from `examples/cart` with the awkward setups that broke mustfail before (spaces in paths, a bare `globalSetup` name, `maxFailures`, an import from `playwright/test`, an output folder outside the project).
 
+## Feedback
+
+Most useful: a grade you think is wrong, with the test (or a cut-down copy) and the reason mustfail gave. Open an issue at https://github.com/ashwink-tech/mustfail/issues. Please leave out response data from your own environment; the reason text and the test source are enough.
+
 ## License
 
-MIT
+MIT. Built by Ashwin ([ashwink-tech](https://github.com/ashwink-tech)).

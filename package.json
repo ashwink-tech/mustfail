@@ -1,8 +1,17 @@
 {
   "name": "mustfail",
-  "version": "0.1.0-alpha.40",
+  "version": "0.1.0-alpha.41",
   "description": "Finds Playwright tests that stay green when the app is broken. No changes to your tests.",
   "license": "MIT",
+  "author": "Ashwin (https://github.com/ashwink-tech)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashwink-tech/mustfail.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ashwink-tech/mustfail/issues"
+  },
+  "homepage": "https://github.com/ashwink-tech/mustfail#readme",
   "bin": {
     "mustfail": "bin/mustfail.js"
   },
@@ -24,7 +33,10 @@
     "testing",
     "e2e",
     "test-quality",
-    "fault-injection"
+    "fault-injection",
+    "mutation-testing",
+    "flaky-tests",
+    "test-strength"
   ],
   "peerDependenciesMeta": {
     "@playwright/test": {
