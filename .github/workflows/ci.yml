@@ -2,6 +2,7 @@ name: ci
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   unit:
@@ -12,8 +13,8 @@ jobs:
         node: [20, 22, 24]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: '${{ matrix.node }}' }
       - run: npm test
 
@@ -30,8 +31,8 @@ jobs:
     env:
       E2E_BROWSER: ${{ matrix.browser }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22 }
       - name: Install example dependencies
         shell: bash
@@ -54,8 +55,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22 }
       - run: node test/matrix.js 1.50.1 1.53.2 1.56.1 1.59.1 1.62.1 1.65.1
 
@@ -64,8 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: '20.6' }
       - run: cd examples/tasks-esm && npm install --no-audit --no-fund
       - run: node test/e2e.js tasks-esm
