@@ -1,0 +1,13 @@
+{
+  "name": "mustfail-example-tasks-esm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  },
+  "scripts": {
+    "test": "playwright test"
+  },
+  "license": "MIT"
+}

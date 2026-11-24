@@ -1,0 +1,9 @@
+{
+  "cart.spec.ts › cart page loads": "decorative",
+  "cart.spec.ts › coupon can be entered": "decorative",
+  "cart.spec.ts › no assertion at all": "decorative",
+  "cart.spec.ts › shows cart items": "unproven",
+  "cart.spec.ts › shows correct total": "strong",
+  "cart.spec.ts › checkout works": "strong",
+  "merged.spec.ts › custom fixture: total shown": "strong"
+}

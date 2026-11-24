@@ -1,0 +1,39 @@
+{
+  "name": "mustfail",
+  "version": "0.1.0-alpha.40",
+  "description": "Finds Playwright tests that stay green when the app is broken. No changes to your tests.",
+  "license": "MIT",
+  "bin": {
+    "mustfail": "bin/mustfail.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.50"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e",
+    "test-quality",
+    "fault-injection"
+  ],
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "test": "node test/run-unit.js",
+    "test:e2e": "node test/e2e.js",
+    "test:all": "node test/run-unit.js && node test/e2e.js"
+  }
+}

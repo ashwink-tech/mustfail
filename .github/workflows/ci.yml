@@ -1,0 +1,71 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ matrix.node }}' }
+      - run: npm test
+
+  e2e:
+    # The example apps graded end to end, on every OS and browser engine. Grades must match
+    # test/expected/*.json exactly: a difference means mustfail behaves differently there.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        browser: [chrome, firefox, webkit]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      E2E_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Install example dependencies
+        shell: bash
+        run: |
+          for d in tasks cart tasks-esm; do (cd examples/$d && npm install --no-audit --no-fund); done
+      - name: Install browser
+        if: matrix.browser != 'chrome'
+        working-directory: examples/tasks
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: node test/e2e.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reports-${{ matrix.os }}-${{ matrix.browser }}
+          path: |
+            examples/*/.mustfail/report.*
+            test/failed/
+
+  playwright-versions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node test/matrix.js 1.50.1 1.53.2 1.56.1 1.59.1 1.62.1 1.65.1
+
+  esm-node20:
+    # ES-module projects need the loader hook, which needs Node 20.6+: check the lowest supported Node.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20.6' }
+      - run: cd examples/tasks-esm && npm install --no-audit --no-fund
+      - run: node test/e2e.js tasks-esm

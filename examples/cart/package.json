@@ -1,0 +1,13 @@
+{
+  "name": "mustfail-example-cart",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  },
+  "private": true
+}

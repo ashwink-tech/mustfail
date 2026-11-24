@@ -1,0 +1,8 @@
+node_modules
+.mustfail/
+test-results/
+playwright-report/
+.auth/
+*.tgz
+examples/cart odd/
+test/failed/
