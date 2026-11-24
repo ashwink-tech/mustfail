@@ -1,0 +1,36 @@
+name: e2e-one
+# Run the e2e grade check on one OS and browser, by hand: for chasing a difference without
+# paying for the whole matrix. Actions tab → e2e-one → Run workflow, or
+#   gh workflow run e2e-one -f os=windows-latest -f browser=firefox -f examples=tasks
+on:
+  workflow_dispatch:
+    inputs:
+      os: { description: 'Runner', default: windows-latest, type: choice, options: [ubuntu-latest, macos-latest, windows-latest] }
+      browser: { description: 'Browser', default: chrome, type: choice, options: [chrome, firefox, webkit] }
+      examples: { description: 'Examples (space-separated; empty for all)', default: '', type: string }
+      times: { description: 'How many times to run it', default: '1', type: string }
+
+jobs:
+  e2e:
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 90
+    env:
+      E2E_BROWSER: ${{ inputs.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Install example dependencies
+        shell: bash
+        run: |
+          for d in tasks cart tasks-esm; do (cd examples/$d && npm install --no-audit --no-fund); done
+      - name: Install browser
+        if: inputs.browser != 'chrome'
+        working-directory: examples/tasks
+        run: npx playwright install --with-deps ${{ inputs.browser }}
+      - name: Run
+        shell: bash
+        run: |
+          status=0
+          for i in $(seq 1 ${{ inputs.times }}); do echo "== run $i"; node test/e2e.js ${{ inputs.examples }} || status=1; done
+          exit $status

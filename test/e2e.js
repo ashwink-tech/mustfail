@@ -79,6 +79,30 @@ function runExample(name, extra) {
   return { name, secs, out, grades: grades(report), reasons };
 }
 
+// What mustfail saw and planned for one mismatched test, printed into the log: CI artifacts are not
+// always reachable, and a difference on one OS or browser is explained by this. Example data only.
+function explain(out, k) {
+  const read = f => { try { return JSON.parse(fs.readFileSync(path.join(out, f), 'utf8')); } catch { return null; } };
+  const lines = [`  why: ${k}`];
+  const plan = read('plan.json'), baseline = read('baseline.json'), faults = read('faults.json');
+  const pk = plan && Object.keys(plan.tests || {}).find(x => x.endsWith(k));
+  if (pk) for (const f of plan.tests[pk].faults) lines.push(`    planned: ${f.op}${f.endpoint ? ' ' + f.endpoint.replace(/https?:\/\/[^/]+/, '') : ''}${f.path ? ' ' + f.path.join('.') : ''}`);
+  else lines.push(`    planned: (not in plan${plan && plan.excluded ? '; excluded: ' + Object.entries(plan.excluded).filter(([x]) => x.endsWith(k)).map(([, v]) => v).join(' ') : ''})`);
+  for (const b of (baseline && baseline.rows || []).filter(x => x.key && x.key.endsWith(k))) {
+    const t = b.traffic || {};
+    lines.push(`    baseline ${b.repeat}: ${b.status} ${b.ms}ms${b.error ? ' error: ' + String(b.error).split('\n')[0].slice(0, 160) : ''}`);
+    lines.push(`      asserted: ${JSON.stringify(t.asserted || []).slice(0, 300)}`);
+    for (const e of t.endpoints || []) {
+      const lists = (e.shape && e.shape.arrays || []).map(a => `${a.path.join('.')}[${a.length}]`).join(' ');
+      lines.push(`      ${e.key.replace(/https?:\/\/[^/]+/, '')} n=${e.count}${e.auth ? ' auth' : ''} lists: ${lists || '-'}`);
+    }
+  }
+  for (const f of (faults && faults.rows || []).filter(x => x.key && x.key.endsWith(k) && x.fault)) {
+    lines.push(`    fault ${f.fault && f.fault.op} ${f.fault && f.fault.path ? f.fault.path.join('.') : ''}: ${f.status} applied=${f.fault && f.fault.applied} bodyStarted=${f.fault && f.fault.bodyStarted}${f.error ? ' error: ' + String(f.error).split('\n')[0].slice(0, 160) : ''}`);
+  }
+  return lines.join('\n');
+}
+
 function main() {
   const args = process.argv.slice(2);
   const update = args.includes('--update');
@@ -110,6 +134,7 @@ function main() {
       fs.mkdirSync(keep, { recursive: true });
       for (const f of fs.readdirSync(r.out)) if (f.endsWith('.json')) fs.copyFileSync(path.join(r.out, f), path.join(keep, f));
       failed++; console.log(`FAIL ${name}: ${diffs.length} grade(s) differ (${r.secs}s); run data kept in ${path.relative(ROOT, keep)}\n${diffs.join('\n')}`);
+      for (const k of Object.keys(want)) if (want[k] !== r.grades[k]) console.log(explain(r.out, k));
     }
     else console.log(`ok   ${name}: ${Object.keys(want).length} tests match (${r.secs}s)`);
   }
