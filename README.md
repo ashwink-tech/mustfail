@@ -1,8 +1,6 @@
 # mustfail
 
-A test that cannot fail is not a test.
-
-`mustfail` finds Playwright tests that stay green when the app is broken. It runs your suite with API responses failed or changed, and reports which tests notice. You do not edit your tests or your config.
+`mustfail` finds Playwright tests that stay green when the app is broken. It runs your suite while it fails or changes your API's responses, then reports which tests noticed. You don't edit your tests or your config.
 
 ```bash
 npx mustfail run
@@ -30,42 +28,48 @@ STRONG — An assertion failed when the data was wrong
 
 (Shortened output from `examples/cart`.)
 
-An HTML version is written to `.mustfail/report.html`: click a grade to show only its tests, or type to filter by test name or file.
+mustfail also writes an HTML report to `.mustfail/report.html`. Click a grade to see its tests, or type to filter by test name or file.
 
-**Requirements:** Node 20 or newer (20.6+ for ES-module projects) and `@playwright/test` 1.50 or newer. No dependencies of its own.
+**Requirements:** Node 20 or newer (20.6+ for ES-module projects) and `@playwright/test` 1.50 or newer. mustfail has no dependencies.
 
-**Nothing leaves your machine.** mustfail makes no network calls of its own: it changes responses on their way from your app to the browser, through Playwright, and writes its report to a local folder.
+**Network:** mustfail makes no calls of its own. It changes responses on their way from your app to the browser, through Playwright, and writes its report to a local folder.
 
-> **Alpha.** Expect rough edges. Run it against a local or disposable environment: fault runs repeat your tests' requests, including writes that the fault does not target.
+> **Alpha.** Run it against a local or disposable environment. Fault runs repeat your tests' requests, writes included, even the ones no fault targets.
 
 ## What the grades mean
 
 | Grade | Rule |
 | --- | --- |
 | **Decorative** | Passed a run where every API call returned 500, or ran no assertion |
-| **Weak** | Failed that run, but passed when its own data was changed or its own write failed (a create, update, delete or save returned 500 and nothing it checks noticed) |
-| **No data check** | Fails when the page cannot load, but none of its assertions is tied to a server value, and it stayed green when its data was changed or emptied. Fine for browser-only behaviour (form rules, date pickers); a gap if the test is meant to verify data |
-| **Strong** | An assertion failed when a value it displays was changed, its list was emptied, the true/false fields in its rows were flipped, or its write failed. Marked "via a helper" when the only assertion that failed sits in a setup helper (`createX`, `waitForX`) rather than the test or a check helper (`expectX`, `verifyX`) |
-| **Request check** | Its real check is on the request the page sent (`request.postData()`, `postDataJSON()`), which no server fault can change. Tests with other grades that also check their request say so in their reason |
-| **Write-gated** | Stops when its own write fails, but only because a click or wait timed out: it waits for the save, and no assertion checked the result. If that write is only setup, it says little about what the test is for |
-| **Unproven** | Needs the data to exist (fails when it is gone), but no assertion mustfail can read is tied to its values, and changing them did not make it fail |
-| **Not measurable** | Fails or flakes without faults, is marked `test.fail()` (a known open bug), makes no API calls in the browser, checks data it mocks itself, or makes a request fail itself (mocks a 4xx/5xx), or its key fault runs broke in setup for a reason the fault cannot explain (see below) |
+| **Weak** | Failed that run, but passed when mustfail changed its own data or failed its own write (a create, update, delete or save returned 500 and nothing it checks noticed) |
+| **No data check** | Fails when the page can't load, but none of its assertions ties to a server value, and it stayed green when mustfail changed or emptied its data. Fine for browser-only behaviour like form rules or date pickers; a gap if you meant the test to verify data |
+| **Strong** | An assertion failed when mustfail changed a value the test displays, emptied its list, flipped the true/false fields in its rows, or failed its write. Marked "via a helper" when the only failing assertion sits in a setup helper (`createX`, `waitForX`) rather than the test or a check helper (`expectX`, `verifyX`) |
+| **Request check** | Its real check reads the request the page sent (`request.postData()`, `postDataJSON()`), and no server fault can change that. Tests with other grades that also check their request say so in their reason |
+| **Write-gated** | Stops when its own write fails, but only because a click or wait timed out. It waits for the save, and no assertion checks the result. If that write is only setup, the grade tells you little about what the test is for |
+| **Unproven** | Needs the data (fails when it's gone), but no assertion mustfail can read ties to its values, and changing them didn't make it fail |
+| **Not measurable** | Fails or flakes without faults, is marked `test.fail()` (a known open bug), makes no API calls in the browser, checks data it mocks itself, mocks a 4xx/5xx itself, or its key fault runs broke in setup for a reason the fault can't explain (see below) |
 
 ## How it works
 
-1. **Baseline.** Runs your suite twice with no faults. It records each test's API calls, the shape of each JSON response (every response of an endpoint, not only the first, so a list fetched again after the test created a row is included), and the text each passing assertion checked. Tests that fail or flip between the two runs are left out.
-2. **Plan.** For each test: one blackout run, then up to three targeted faults (`--max-targeted`), plus probes of the page's main list, one failed write of its own and, where it checks booleans, one flip of them. Targets are chosen by matching the text your assertions checked against response values, so a test that asserts `42.00` gets the response field `total: 42` changed. A value the test created itself (it appears only in a later response and has digits in it, like a generated name) counts as a match even when the assertion only checks that the row is visible.
-3. **Fault runs.** All in one Playwright invocation with `--repeat-each`, using your config's workers and projects. Faults are applied with `context.route`. Login and session endpoints are never faulted, and that includes the signed-in user's own record (`/me`, `/users/me`): a test that only shows the user's name or email cannot be proven here.
-4. **Retry of broken setups.** A fault run that fails before the test body starts, while its fault has not touched a single request, was not broken by the fault. Usually an earlier test failed partway (as fault runs make it) and skipped cleanup at the end of its body: a setting left on, a rate limit, leftover data. mustfail re-runs the tests that failed just before each such stretch with no fault (their passing run usually undoes it), then retries those runs once. The report warns with the error and the suspects, and tests whose key runs still broke are graded not measurable instead of on what was left. The fix in your suite is to move that cleanup into `afterEach` or a `finally` block, which also protects you when a real bug makes the test fail.
-5. **Second look.** Each strong or write-gated grade rests on one run. That run is repeated once; if the two disagree (an assertion failed one time, a wait timed out the other), the weaker result is counted and the test's notes say so. Skip with `--no-confirm`.
+1. **Baseline.** mustfail runs your suite twice with no faults. It records each test's API calls, the shape of every JSON response per endpoint (so it sees a list the app fetches again after the test creates a row), and the text each passing assertion checked. It leaves out tests that fail or flip between the two runs.
+2. **Plan.** Each test gets one blackout run and up to three targeted faults (`--max-targeted`). On top of those come probes of the page's main list, one failed write of the test's own and, if it checks booleans, one flip of them. mustfail picks targets by matching the text your assertions checked against response values: a test that asserts `42.00` gets the field `total: 42` changed. A value the test created itself counts as a match even when the assertion only checks that the row is visible. mustfail spots those as values with digits in them (a generated name, say) that turn up only in a later response.
+3. **Fault runs.** mustfail runs them all in one Playwright invocation with `--repeat-each`, on your config's workers and projects, and applies faults with `context.route`. It leaves login and session endpoints alone, and the signed-in user's own record (`/me`, `/users/me`) with them. So it can't prove a test that only shows the user's name or email.
+4. **Retry of broken setups.** Sometimes a fault run fails before the test body starts, and its fault hasn't touched a single request. The fault didn't cause that. Most often an earlier test failed partway (fault runs make tests fail) and skipped the cleanup at the end of its body, leaving a setting on, a rate limit hit or leftover data behind. mustfail re-runs the tests that failed just before each such stretch with no fault, since their passing run tends to undo the damage. Then it retries the broken runs once. The report shows the error and the suspects. A test whose key runs still broke gets "not measurable" instead of a grade built on what was left. To fix it in your suite, move that cleanup into `afterEach` or a `finally` block. That also protects you when a real bug makes the test fail.
+5. **Second look.** Each strong or write-gated grade rests on one run, so mustfail repeats that run once. If the two disagree (an assertion failed one time, a wait timed out the other), the weaker result counts and the test's notes say so. Skip this with `--no-confirm`.
 
-When the output folder holds a report from an earlier run, the new one ends with what changed for the tests graded both times (stronger, weaker, other), and the HTML report shows each changed test's previous grade.
+Run it again into the same output folder and the new report ends with the tests whose grade changed (stronger, weaker, other). The HTML report shows each one's previous grade.
 
-It hooks in at load time: `@playwright/test` (and `playwright/test`) imports in your own files resolve to a thin wrapper that adds the fixtures. Playwright runs from the folder you started mustfail in, as `npx playwright test -c <config>` would. Nothing is written to your repo except the output folder (`.mustfail/` by default); the temporary config that wraps yours lives there and is removed at the end.
+mustfail hooks in at load time. In your own files, imports of `@playwright/test` (and `playwright/test`) resolve to a thin wrapper that adds the fixtures. Playwright runs from the folder you started mustfail in, as `npx playwright test -c <config>` would. mustfail writes nothing to your repo except the output folder (`.mustfail/` by default). The temporary config that wraps yours lives there, and mustfail removes it at the end.
 
-The wrapped config is yours with a few settings changed for the run: retries off, mustfail's reporter in place of yours, `maxFailures` off (fault runs fail on purpose), projects that others depend on (login, seeding) run once instead of once per repeat, `globalTimeout` multiplied by the number of times each test runs, and `updateSnapshots: 'none'` during fault runs, so a page showing wrong data can never write or replace a snapshot.
+That config is yours with a few settings changed for the run:
 
-The output folder holds `baseline.json` and `plan.json`, which contain samples of what your API returned (names, emails, whatever the app shows). mustfail puts a `.gitignore` in the folder so it stays out of git; treat those two files like test data from that environment. `report.html` and `report.json` hold field names, endpoints and error lines, not response values.
+- retries off, and mustfail's reporter in place of yours
+- `maxFailures` off, since fault runs fail on purpose
+- projects that others depend on (login, seeding) run once rather than once per repeat
+- `globalTimeout` multiplied by the number of times each test runs
+- `updateSnapshots: 'none'` during fault runs, so a page showing wrong data can't write or replace a snapshot
+
+`baseline.json` and `plan.json` in the output folder hold samples of what your API returned: names, emails, whatever the app shows. mustfail adds a `.gitignore` to the folder to keep them out of git. Treat both files like test data from that environment. `report.html` and `report.json` hold field names, endpoints and error lines, and no response values.
 
 ## Options
 
@@ -87,11 +91,17 @@ npx mustfail run [options] [-- <extra playwright test args>]
   npx mustfail run -- --project=chromium tests/checkout
 ```
 
-Exit codes: 0 when the run finished (whatever the grades, unless `--fail-on` matched), 1 when `--fail-on` matched or mustfail crashed, 2 for a usage or setup problem (no config, no `@playwright/test`, no tests listed). Ctrl-C or a CI timeout stops Playwright and its web server and removes mustfail's temporary config.
+Exit codes:
+
+- **0:** the run finished, whatever the grades, unless `--fail-on` matched
+- **1:** `--fail-on` matched, or mustfail crashed
+- **2:** a usage or setup problem (no config, no `@playwright/test`, no tests listed)
+
+Ctrl-C or a CI timeout stops Playwright and its web server, and mustfail removes its temporary config.
 
 ## In CI
 
-Grades are only worth gating on once you have read a first report and agree with it. Then, for example in GitHub Actions:
+Read a first report and agree with it before you gate a build on grades. Then, in GitHub Actions for example:
 
 ```yaml
 - run: npx mustfail run --yes --fail-on decorative -- --project=chromium
@@ -100,25 +110,25 @@ Grades are only worth gating on once you have read a first report and agree with
   with: { name: mustfail-report, path: .mustfail/report.html }
 ```
 
-With no terminal there is no prompt; `--yes` makes that explicit. Run it on a schedule or on pull requests that touch tests, not on every push: a full run takes 3 to 4 times your suite's runtime.
+CI has no terminal, so mustfail skips the prompt anyway; `--yes` makes that explicit. A full run takes 3 to 4 times your suite's runtime, so run it on a schedule or on pull requests that touch tests, not on every push.
 
 ## Limits today
 
-- **Only tests that get `test` from your own files are seen.** A `test` object that comes from a package in `node_modules` (a shared fixtures package), a browser context the test creates itself (`browser.newContext()`), and API-only tests are out of reach; they are graded not measurable, and mustfail says so when it saw no test at all.
-- **A save is recognised by its shape.** GraphQL mutations by a saving verb in the operation name; REST by PUT, PATCH, DELETE, a saving verb in the path, or a POST the server answered with 201. A create that answers 200 on a plain path (`POST /orders`) is still failed once, but staying green then is not graded weak.
-- **ES-module projects need Node 20.6 or newer.** Projects with `"type": "module"` or an `.mjs`/`.mts` config are redirected through a Node loader hook (`module.register`); CommonJS projects use a `--require` hook.
-- **Only browser traffic.** Data fetched on the server (Next.js SSR, server components) never reaches the browser, so tests that depend on it show as not measurable. So do API-only tests using `request`, and tests that create their own browser context.
-- **Requests cannot be faulted.** A test that asserts what it sent is recognised (graded "request check" or noted), not proven: mustfail changes responses, not what the app sends.
-- **Booleans are probed only where there is a sign the test reads them.** A test asserting `toBeChecked`, `toBeEnabled` or `toBeDisabled` gets one extra fault that flips the true/false fields in the rows of a list it reads, when its checked text comes from that list or a boolean in it changed between responses. Booleans outside lists, or in lists with neither sign, are not flipped.
-- **Only the first five rows of a list are read** for matching, so a row a test creates far down a long list does not link to its assertion.
-- **Strong says an assertion failed, not which one mattered.** When the only assertion that failed sits in a helper whose name has no check verb (`createMetric`, `waitForTile`, not `expectRow` or `verifyTotal`), the grade is marked "strong (via a helper)" and names it: often a page object checking the setup it just did, while the test's own check is a count or a boolean mustfail cannot see. Helpers are told apart by name only.
-- **A changed value that breaks a click is not proof.** A test that finds a row by the value mustfail changed stops on the click before any assertion. It is not graded strong, but its reason says the wrong value did stop it.
-- **Unproven covers tests that only need the app's own configuration.** When the blackout breaks a test in setup, the next fault that breaks it is often an emptied schema or menu list (`/init`, content-type definitions). The grade stays unproven, and the reason says so when most tests in the run read that call. In a run of one feature's folder the feature's own list is read by most tests too, so the wording is a hint, not a verdict.
-- **The suspects in a broken-setup warning are a shortlist.** Tests in one file run back to back, so the one that leaked state and its neighbours look the same; the retry fixes the grades either way.
-- **Only the deciding run is repeated.** A test with a race in it can stop at a different step from one run to the next (a wait one time, an assertion the next). The run a strong or write-gated grade rests on is run twice and the weaker result counts; two runs catch such a race often, not always, and runs that decide other grades are run once.
-- **Two baseline runs** catch flaky tests only some of the time.
-- **Runtime:** about 3 to 4 times your normal suite runtime for a full run. Scope with extra Playwright args.
-- **Tested on Playwright 1.50 to 1.65** (1.50, 1.53, 1.56, 1.59, 1.62, 1.65: every example grade identical) and Node 20, 22 and 24, on Linux, macOS and Windows, with Chrome, Firefox and WebKit (every example grade identical in CI), and against two real suites with Chrome/Chromium (a large private suite and Strapi's admin, settings and content-manager e2e tests, 200+ tests).
+- **mustfail only sees tests that get `test` from your own files.** It can't reach a `test` that comes from a package in `node_modules` (a shared fixtures package), a browser context the test creates itself (`browser.newContext()`), or API-only tests. It grades those not measurable, and tells you when it saw no test at all.
+- **mustfail recognises a save by its shape.** For GraphQL, that's a saving verb in the operation name. For REST, it's PUT, PATCH, DELETE, a saving verb in the path, or a POST the server answered with 201. mustfail still fails a create that answers 200 on a plain path (`POST /orders`) once, but a test that stays green then doesn't get "weak".
+- **ES-module projects need Node 20.6 or newer.** mustfail redirects projects with `"type": "module"` or an `.mjs`/`.mts` config through a Node loader hook (`module.register`), and CommonJS projects through a `--require` hook.
+- **Browser traffic only.** Data your app fetches on the server (Next.js SSR, server components) never reaches the browser, so tests that depend on it come out not measurable. So do API-only tests using `request`, and tests that create their own browser context.
+- **mustfail can't fault requests.** It changes responses, not what the app sends. It recognises a test that asserts what it sent (graded "request check", or noted in the reason) but can't prove it.
+- **mustfail flips booleans only when the test shows signs of reading them.** A test asserting `toBeChecked`, `toBeEnabled` or `toBeDisabled` gets one extra fault that flips the true/false fields in the rows of a list it reads. That happens when its checked text comes from that list, or when a boolean in the list changed between responses. Booleans outside lists, or in lists with neither sign, stay as they are.
+- **mustfail reads the first five rows of a list** for matching. A row your test creates far down a long list won't link to its assertion.
+- **A strong grade means some assertion failed.** It doesn't tell you the one you care about did. When the only failing assertion sits in a helper whose name has no check verb (`createMetric`, `waitForTile`, as opposed to `expectRow` or `verifyTotal`), mustfail marks the grade "strong (via a helper)" and names the helper. That's often a page object checking the setup it just did, while the test's own check is a count or a boolean mustfail can't see. mustfail tells helpers apart by name only.
+- **A changed value that breaks a click proves nothing.** A test that finds a row by the value mustfail changed stops on the click before any assertion runs. It doesn't get "strong", but its reason says the wrong value stopped it.
+- **Unproven also covers tests that only need the app's own configuration.** When the blackout breaks a test in setup, the next fault that breaks it is often an emptied schema or menu list (`/init`, content-type definitions). The grade stays unproven, and the reason says so when most tests in the run read that call. If you run one feature's folder, most of its tests read that feature's own list too, so treat the wording as a hint.
+- **The suspects in a broken-setup warning are a shortlist.** Tests in one file run back to back, so the one that leaked state looks the same as its neighbours. The retry fixes the grades either way.
+- **mustfail repeats only the deciding run.** A test with a race in it can stop at a different step each time: a wait one run, an assertion the next. mustfail runs the deciding run of a strong or write-gated grade twice and counts the weaker result. Two runs catch such a race often, not always, and mustfail runs the deciding run of any other grade once.
+- **Two baseline runs** catch some flaky tests and miss others.
+- **Runtime:** a full run takes about 3 to 4 times your suite's runtime. Pass extra Playwright args to scope it.
+- **Tested on Playwright 1.50 to 1.65** (1.50, 1.53, 1.56, 1.59, 1.62 and 1.65, every example grade identical) and Node 20, 22 and 24, on Linux, macOS and Windows, with Chrome, Firefox and WebKit (every example grade identical in CI). Also run with Chrome/Chromium against two real suites: a large private suite, and Strapi's admin, settings and content-manager e2e tests (200+ tests).
 
 ## How this differs from similar tools
 
@@ -126,8 +136,8 @@ With no terminal there is no prompt; `--yes` makes that explicit. Run it on a sc
 | --- | --- | --- |
 | **mustfail** | Fails or changes real API responses at runtime and checks whether each test notices | No |
 | playwright-mutation-gate | Inverts each test's primary assertion and checks the test goes red | Yes, mark one assertion per test |
-| falsegreen, hollowtest, vacuous | Read test source for patterns that cannot fail (no assertion, tautologies) | No, but cannot see runtime behaviour |
-| Stryker and other mutation tools | Change application source and run unit tests | No, but unit-level, not end-to-end |
+| falsegreen, hollowtest, vacuous | Read test source for patterns that can't fail (no assertion, tautologies) | No, but can't see runtime behaviour |
+| Stryker and other mutation tools | Change application source and run unit tests | No, but unit-level rather than end-to-end |
 
 ## Development
 
@@ -138,11 +148,11 @@ node test/e2e.js --update        # rewrite the snapshots after an intended chang
 node test/matrix.js 1.50.1 1.65.1  # the tasks example against other @playwright/test versions
 ```
 
-The examples need Google Chrome installed (they use `channel: 'chrome'`). `examples/tasks-esm` is generated from `examples/tasks` by the e2e script: edit the tasks app, not the copy. `examples/cart odd` is generated from `examples/cart` with the awkward setups that broke mustfail before (spaces in paths, a bare `globalSetup` name, `maxFailures`, an import from `playwright/test`, an output folder outside the project).
+The examples need Google Chrome installed (they use `channel: 'chrome'`). The e2e script generates `examples/tasks-esm` from `examples/tasks`, so edit the tasks app and leave the copy alone. It also generates `examples/cart odd` from `examples/cart`, with the awkward setups that broke mustfail before: spaces in paths, a bare `globalSetup` name, `maxFailures`, an import from `playwright/test` and an output folder outside the project.
 
 ## Feedback
 
-Most useful: a grade you think is wrong, with the test (or a cut-down copy) and the reason mustfail gave. Open an issue at https://github.com/ashwink-tech/mustfail/issues. Please leave out response data from your own environment; the reason text and the test source are enough.
+The most useful report is a grade you think is wrong. Send the test (or a cut-down copy) and the reason mustfail gave, in an issue at https://github.com/ashwink-tech/mustfail/issues. Leave out response data from your own environment; the reason and the test source are enough.
 
 ## License
 
